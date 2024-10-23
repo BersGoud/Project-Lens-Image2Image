@@ -7,38 +7,51 @@ class pipes_img2img:
     def __init__(self):
         pass
 
-    # Function to crop the image to the center 512x512
+    # Function to crop the image for profile (center 512x512) or landscape (standard landscape ratio)
     @staticmethod
-    def center_crop_image(input_image, size=(512, 512)):
+    def crop_image(input_image, crop_type="profile", size=(512, 512)):
         """
-        Crop the image to the center of the specified size.
-
+        Crop the image based on the desired crop type (profile or landscape).
+        
         Args:
             input_image (PIL.Image): Input image to crop.
-            size (tuple): Desired output size (width, height).
+            crop_type (str): Type of cropping - 'profile' or 'landscape'.
+            size (tuple): Desired output size (width, height). For profile it defaults to 512x512.
 
         Returns:
             PIL.Image: Cropped image.
         """
         width, height = input_image.size
-        new_width, new_height = size
+        
+        if crop_type == "profile":
+            # For profile images, crop the image to 512x512 (centered)
+            new_width, new_height = size
+            left = (width - new_width) / 2
+            top = (height - new_height) / 2
+            right = (width + new_width) / 2
+            bottom = (height + new_height) / 2
+            return input_image.crop((left, top, right, bottom))
+        
+        elif crop_type == "landscape":
+            # For landscape, we crop to a 16:9 ratio
+            landscape_ratio = (16, 9)
+            new_width = min(width, int(height * landscape_ratio[0] / landscape_ratio[1]))
+            new_height = min(height, int(width * landscape_ratio[1] / landscape_ratio[0]))
+            
+            left = (width - new_width) / 2
+            top = (height - new_height) / 2
+            right = (width + new_width) / 2
+            bottom = (height + new_height) / 2
+            return input_image.crop((left, top, right, bottom))
 
-        left = (width - new_width) / 2
-        top = (height - new_height) / 2
-        right = (width + new_width) / 2
-        bottom = (height + new_height) / 2
-
-        return input_image.crop((left, top, right, bottom))
-
-    # Function to generate image using Image2Image technique for the profile
+    # Function to generate an anime-style image for a character-focused profile image
     @staticmethod
-    def generate_image2image_profile(input_image_path: str, prompt: str, output_image_path: str):
+    def generate_image2image_anime_profile(input_image_path: str, output_image_path: str):
         """
-        Generate an image based on an input image and a text prompt using the Stable Diffusion Image2Image pipeline.
+        Generate an anime-style profile image (character-focused) using the Stable Diffusion Image2Image pipeline.
 
         Args:
             input_image_path (str): Path to the input image.
-            prompt (str): Text prompt to guide the image generation.
             output_image_path (str): Path where the generated image will be saved.
 
         Returns:
@@ -52,34 +65,40 @@ class pipes_img2img:
         # Load the input image using Pillow
         input_image = Image.open(input_image_path).convert("RGB")
 
-        # Center crop the input image to 512x512 pixels
-        input_image = pipes_img2img.center_crop_image(input_image, size=(512, 512))
+        # Center crop the input image to 512x512 pixels (profile image)
+        input_image = pipes_img2img.crop_image(input_image, crop_type="profile", size=(512, 512))
 
-        # Generate the new image from input image and prompt
+        # Define the anime-style prompt with a focus on the character's profile
+        anime_profile_prompt = (
+            "Anime-style character portrait, highly detailed, sharp line art, "
+            "soft lighting, vivid colors, expressive eyes, fine character details, "
+            "Studio Ghibli style, dynamic pose, beautiful lighting"
+        )
+
+        # Generate the new image from input image and anime-style prompt
         generated_images = pipe(
-            prompt=prompt,
+            prompt=anime_profile_prompt,
             image=input_image,
-            strength=0.5,  # Lower strength for faster generation
-            guidance_scale=5.0,  # Lower guidance for speed
-            num_inference_steps=25  # Reduce inference steps for faster generation
+            strength=0.6,  # Control transformation strength
+            guidance_scale=7.5,  # Reduced guidance for smoother transformation
+            num_inference_steps=25  # More steps for finer details
         ).images
 
         # Save the generated image
         generated_image = generated_images[0]
         generated_image.save(output_image_path, format='PNG')
-        print(f"Image saved at {output_image_path}")
+        print(f"Anime-style profile image saved at {output_image_path}")
 
-
-    # Function to generate image using Image2Image technique for the posts
+    # Function to generate an anime-style image for a landscape or character-focused post
     @staticmethod
-    def generate_image2image_post(input_image_path: str, prompt: str, output_image_path: str):
+    def generate_image2image_anime_post(input_image_path: str, output_image_path: str, crop_type="landscape"):
         """
-        Generate an image based on an input image and a text prompt using the Stable Diffusion Image2Image pipeline.
+        Generate an anime-style image for posts (either landscape or character-focused) using the Stable Diffusion Image2Image pipeline.
 
         Args:
             input_image_path (str): Path to the input image.
-            prompt (str): Text prompt to guide the image generation.
             output_image_path (str): Path where the generated image will be saved.
+            crop_type (str): Crop type - 'landscape' for wide images or 'profile' for character posts.
 
         Returns:
             None
@@ -92,29 +111,42 @@ class pipes_img2img:
         # Load the input image using Pillow
         input_image = Image.open(input_image_path).convert("RGB")
 
-        # Center crop the input image to 512x512 pixels
-        input_image = pipes_img2img.center_crop_image(input_image, size=(512, 512))
+        # Crop the image to either profile (512x512) or landscape (16:9)
+        if crop_type == "profile":
+            input_image = pipes_img2img.crop_image(input_image, crop_type="profile", size=(512, 512))
+        else:
+            input_image = pipes_img2img.crop_image(input_image, crop_type="landscape")
 
-        # Generate the new image from input image and prompt
+        # Define the anime-style prompt with a focus on landscape or dynamic character posts
+        anime_post_prompt = (
+            "Anime-style scene, dynamic action pose, highly detailed characters, "
+            "vivid colors, lush backgrounds, beautiful lighting, artistic brush strokes, "
+            "vibrant aesthetics, Studio Ghibli inspired, epic landscape, emotional atmosphere"
+        )
+
+        # Generate the new image from input image and anime-style prompt
         generated_images = pipe(
-            prompt=prompt,
+            prompt=anime_post_prompt,
             image=input_image,
-            strength=0.5,  # Lower strength for faster generation
-            guidance_scale=5.0,  # Lower guidance for speed
-            num_inference_steps=25  # Reduce inference steps for faster generation
+            strength=0.6,  # Control transformation strength
+            guidance_scale=7.5,  # Reduced guidance for smoother results
+            num_inference_steps=25  # More steps for finer details
         ).images
 
         # Save the generated image
         generated_image = generated_images[0]
         generated_image.save(output_image_path, format='PNG')
-        print(f"Image saved at {output_image_path}")
+        print(f"Anime-style post image saved at {output_image_path}")
 
 # Example usage:
 if __name__ == "__main__":
     # Path to your input image
-    input_img_path = "input_image_prof.png"  # Replace with your image path
-    prompt_text = "Painted in soft, brushstrokes. The colors are rich and vivid"  # Example prompt
-    output_img_path = "output_image_prof.png"  # Where the generated image will be saved
+    input_img_path = "img.png"  # Replace with your image path
+    output_img_profile = "output_image_anime_profile.png"  # Where the generated profile image will be saved
+    output_img_landscape = "output_image_anime_post.png"  # Where the generated landscape image will be saved
 
-    # Generate the image
-    pipes_img2img.generate_image2image_profile(input_img_path, prompt_text, output_img_path)
+    # Generate the anime-style profile (character) image
+    pipes_img2img.generate_image2image_anime_profile(input_img_path, output_img_profile)
+
+    # Generate the anime-style landscape or character post image
+    pipes_img2img.generate_image2image_anime_post(input_img_path, output_img_landscape, crop_type="landscape")
