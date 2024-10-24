@@ -1,9 +1,10 @@
 import torch
 from diffusers import StableDiffusionImg2ImgPipeline
 from PIL import Image
+import random
 
 # Made by Bers Goudantov, 3ITAI AP Antwerp
-class pipes_img2img:
+class PipesImg2Img:
     def __init__(self):
         pass
 
@@ -44,109 +45,135 @@ class pipes_img2img:
             bottom = (height + new_height) / 2
             return input_image.crop((left, top, right, bottom))
 
-    # Function to generate an anime-style image for a character-focused profile image
+    # "Surprise me" - randomly change the style of the image
     @staticmethod
-    def generate_image2image_anime_profile(input_image_path: str, output_image_path: str):
+    def random_style():
         """
-        Generate an anime-style profile image (character-focused) using the Stable Diffusion Image2Image pipeline.
+        Returns a random style prompt for the "Surprise me" feature.
+        """
+        styles = [
+            # Realistic Styles
+            "Oil painting in the style of Rembrandt, detailed brush strokes, vibrant colors",
+            "Realistic portrait painting, fine details, soft shadows, photorealistic textures",
+            "Baroque oil painting, dramatic lighting, highly detailed textures",
+
+            # Impressionist Styles
+            "Impressionist oil painting, soft lighting, blurry strokes, pastel colors",
+            "Post-Impressionist painting, vivid colors, emotional expression, dynamic brushwork",
+
+            # Modern & Abstract Styles
+            "Modern abstract oil painting, bold colors, artistic and expressive brushwork",
+            "Cubist style, fragmented forms, multiple perspectives, muted tones",
+
+            # Anime Styles
+            "Anime-style illustration, vibrant colors, exaggerated expressions, whimsical backgrounds",
+            "Fantasy anime character design, dynamic poses, ethereal lighting, magical elements",
+
+            # Pixel Art Styles
+            "Pixel art style, 8-bit graphics, bright colors, blocky character design",
+            "Retro pixel art, nostalgic video game aesthetics, minimalistic details",
+
+            # Cartoon Styles
+            "Cartoon style, bold outlines, flat colors, humorous expressions",
+            "Comic book style, dynamic action poses, exaggerated features, inking details",
+
+            # Surreal Styles
+            "Surrealist painting, dream-like imagery, bizarre combinations, vivid colors",
+            "Dali-inspired surrealism, melting clocks, unexpected juxtapositions, detailed textures"
+        ]
+        return random.choice(styles)
+
+    # Generate an oil painting-style profile image (512x512)
+    @staticmethod
+    def generate_image2image_profile(input_image_path: str, output_image_path: str, surprise_me=False):
+        """
+        Generate an oil painting-style profile image using the Stable Diffusion Image2Image pipeline.
 
         Args:
             input_image_path (str): Path to the input image.
             output_image_path (str): Path where the generated image will be saved.
+            surprise_me (bool): If true, randomly selects a style for the image.
 
         Returns:
             None
         """
-        # Load the model pipeline for image2image generation
         device = "cuda" if torch.cuda.is_available() else "cpu"
         pipe = StableDiffusionImg2ImgPipeline.from_pretrained("sd-legacy/stable-diffusion-v1-5")
         pipe = pipe.to(device)
 
-        # Load the input image using Pillow
         input_image = Image.open(input_image_path).convert("RGB")
+        input_image = PipesImg2Img.crop_image(input_image, crop_type="profile", size=(512, 512))
 
-        # Center crop the input image to 512x512 pixels (profile image)
-        input_image = pipes_img2img.crop_image(input_image, crop_type="profile", size=(512, 512))
-
-        # Define the anime-style prompt with a focus on the character's profile
-        anime_profile_prompt = (
-            "Anime-style character portrait, highly detailed, sharp line art, "
-            "soft lighting, vivid colors, expressive eyes, fine character details, "
-            "Studio Ghibli style, dynamic pose, beautiful lighting"
+        # Oil painting prompt or "Surprise me" style
+        oil_painting_prompt = PipesImg2Img.random_style() if surprise_me else (
+            "Oil painting, highly detailed, rich textures, classical portrait, "
+            "soft brush strokes, realistic lighting, deep colors"
         )
 
-        # Generate the new image from input image and anime-style prompt
         generated_images = pipe(
-            prompt=anime_profile_prompt,
+            prompt=oil_painting_prompt,
             image=input_image,
-            strength=0.6,  # Control transformation strength
-            guidance_scale=7.5,  # Reduced guidance for smoother transformation
-            num_inference_steps=25  # More steps for finer details
+            strength=0.34,
+            guidance_scale=7.5,
+            num_inference_steps=30
         ).images
 
-        # Save the generated image
         generated_image = generated_images[0]
         generated_image.save(output_image_path, format='PNG')
-        print(f"Anime-style profile image saved at {output_image_path}")
+        print(f"Oil painting-style profile image saved at {output_image_path}")
 
-    # Function to generate an anime-style image for a landscape or character-focused post
+    # Generate an oil painting-style image for posts (landscape or profile)
     @staticmethod
-    def generate_image2image_anime_post(input_image_path: str, output_image_path: str, crop_type="landscape"):
+    def generate_image2image_post(input_image_path: str, output_image_path: str, crop_type="landscape", surprise_me=False):
         """
-        Generate an anime-style image for posts (either landscape or character-focused) using the Stable Diffusion Image2Image pipeline.
+        Generate an oil painting-style post image using the Stable Diffusion Image2Image pipeline.
 
         Args:
             input_image_path (str): Path to the input image.
             output_image_path (str): Path where the generated image will be saved.
             crop_type (str): Crop type - 'landscape' for wide images or 'profile' for character posts.
+            surprise_me (bool): If true, randomly selects a style for the image.
 
         Returns:
             None
         """
-        # Load the model pipeline for image2image generation
         device = "cuda" if torch.cuda.is_available() else "cpu"
         pipe = StableDiffusionImg2ImgPipeline.from_pretrained("sd-legacy/stable-diffusion-v1-5")
         pipe = pipe.to(device)
 
-        # Load the input image using Pillow
         input_image = Image.open(input_image_path).convert("RGB")
 
-        # Crop the image to either profile (512x512) or landscape (16:9)
         if crop_type == "profile":
-            input_image = pipes_img2img.crop_image(input_image, crop_type="profile", size=(512, 512))
+            input_image = PipesImg2Img.crop_image(input_image, crop_type="profile", size=(512, 512))
         else:
-            input_image = pipes_img2img.crop_image(input_image, crop_type="landscape")
+            input_image = PipesImg2Img.crop_image(input_image, crop_type="landscape")
 
-        # Define the anime-style prompt with a focus on landscape or dynamic character posts
-        anime_post_prompt = (
-            "Anime-style scene, dynamic action pose, highly detailed characters, "
-            "vivid colors, lush backgrounds, beautiful lighting, artistic brush strokes, "
-            "vibrant aesthetics, Studio Ghibli inspired, epic landscape, emotional atmosphere"
+        # Oil painting prompt or "Surprise me" style
+        oil_painting_prompt = PipesImg2Img.random_style() if surprise_me else (
+            "Oil painting of a scenic landscape, vibrant colors, lush details, dramatic lighting, "
+            "detailed textures, realistic brush strokes"
         )
 
-        # Generate the new image from input image and anime-style prompt
         generated_images = pipe(
-            prompt=anime_post_prompt,
+            prompt=oil_painting_prompt,
             image=input_image,
-            strength=0.6,  # Control transformation strength
-            guidance_scale=7.5,  # Reduced guidance for smoother results
-            num_inference_steps=25  # More steps for finer details
+            strength=0.34,
+            guidance_scale=7.5,
+            num_inference_steps=30
         ).images
 
-        # Save the generated image
         generated_image = generated_images[0]
         generated_image.save(output_image_path, format='PNG')
-        print(f"Anime-style post image saved at {output_image_path}")
+        print(f"Oil painting-style post image saved at {output_image_path}")
 
 # Example usage:
 if __name__ == "__main__":
-    # Path to your input image
     input_img_path = "img.png"  # Replace with your image path
-    output_img_profile = "output_image_anime_profile.png"  # Where the generated profile image will be saved
-    output_img_landscape = "output_image_anime_post.png"  # Where the generated landscape image will be saved
+    output_img_profile = "output_image_oil_painting_profile.png"
+    output_img_landscape = "output_image_oil_painting_post.png"
 
-    # Generate the anime-style profile (character) image
-    pipes_img2img.generate_image2image_anime_profile(input_img_path, output_img_profile)
+    # Generate an oil painting-style profile image, is standardized to 512px to 512px
+    PipesImg2Img.generate_image2image_profile(input_img_path, output_img_profile, surprise_me=True)
 
-    # Generate the anime-style landscape or character post image
-    pipes_img2img.generate_image2image_anime_post(input_img_path, output_img_landscape, crop_type="landscape")
+    # Generate an oil painting-style landscape or character post image, is standardized to 16:9 scale
+    PipesImg2Img.generate_image2image_post(input_img_path, output_img_landscape, crop_type="landscape", surprise_me=True)
